@@ -1,0 +1,16 @@
+wheel
+
+--index-url https://download.pytorch.org/whl/cu118
+torch
+torchvision
+torchaudio
+
+--index-url https://huggingface.github.io/autogptq-index/whl/cu118/
+auto-gptq
+
+--index-url
+accelerate
+transformers>="4.34.1"
+optimum
+
+gradio

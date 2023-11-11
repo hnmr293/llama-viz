@@ -3,3 +3,6 @@ __pycache__/
 venv/
 .vscode/
 .vs/
+
+/models/*
+!/models/dummy.txt
