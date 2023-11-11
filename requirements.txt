@@ -19,5 +19,7 @@ accelerate
 transformers>="4.34.1"
 optimum
 auto-gptq
+einops
 
 gradio
+plotly

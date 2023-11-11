@@ -4,7 +4,10 @@ import re
 import time
 
 import torch
+import einops
 import gradio as gr
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
 
 from load import get_model
 from ui import ui
@@ -17,6 +20,8 @@ class GenerationResult:
     output: str
     output_ids: torch.Tensor
     output_tokens: list[str]
+
+    attentions: list
 
     def __str__(self):
         return self.output
@@ -34,6 +39,36 @@ device={self.device.type}:{self.device.index}
 time={self.time/1000000:.1f}ms
      {self.time_per_token/1000000:.1f}ms/token ({1000000000/self.time_per_token:.1f}tokens/s)
 """
+
+
+
+def retrieve_attentions(attentions: tuple[tuple[torch.Tensor]]):
+    # attensions:
+    #   Tuple (one element for each generated token) of 
+    #   tuples (one element for each layer of the decoder) of 
+    #   torch.FloatTensor of shape (num_return_sequences*batch_size, num_heads, generated_length, sequence_length).
+    
+    # N = input_ids.size(-1)
+    # n = output.sequences.size(-1)
+    # attentions = (
+    #     ( (1,32,N,N), ..., (1,32,N,N) ), # 32 elements for token[0]
+    #     ( (1,32,1,N+1), ..., (1,32,1,N+1) ), # 32 elements for token[1]
+    #     ...,
+    #     ( (1,32,1,N+n-1), ..., (1,32,1,N+n-1) ), # 32 elements for token[n-1]
+    # )
+
+    assert attentions[0][0].size(0) == 1
+    
+    attentions = [
+        einops.rearrange(
+            torch.stack(token),       # (32',1,32,m,n) where m is the number of generating tokens, n is context size (input + generated tokens)
+            "a b h m n -> m b a n h", # (m,1,32',n,32)
+        ).squeeze(1)                  # (m,32',n,32)
+        for token in attentions
+    ]
+    
+    return attentions
+
 
 def main(prompt, *args):
     (
@@ -86,8 +121,8 @@ def main(prompt, *args):
         input_ids=input_ids.to(model.device),
         **generate_args,
         #streamer=model.streamer,
-        output_scores=True,
-        output_attentions=False,
+        output_scores=False,
+        output_attentions=True,
         output_hidden_states=False,
         return_dict_in_generate=True,
     )
@@ -106,6 +141,7 @@ def main(prompt, *args):
         output=result,
         output_ids=output_ids,
         output_tokens=[model.tokenizer.batch_decode(ids) for ids in output_ids],
+        attentions=retrieve_attentions(output.attentions),
     )
     info = GenerationInfo(
         device=model.model.device,
@@ -119,6 +155,8 @@ def main(prompt, *args):
 def main_wrap(*args, **kwargs):
     try:
         result, info = main(*args, **kwargs)
+        
+        # create HTML for the token-separated text
         result_html = []
         for i, (id, token) in enumerate(zip(result.output_ids[0], result.output_tokens[0])):
             token = re.sub(r"\r?\n", '&lt;|newline|&gt;', html.escape(token))
@@ -130,9 +168,68 @@ def main_wrap(*args, **kwargs):
 
         header = '<label>Output<div class="output">'
         content = "".join(result_html).replace("&lt;|newline|&gt;", "&lt;|newline|&gt;<br/>")
+        
+        # create heapmaps
+        heatmaps = []
+        
+        max_layer_count = max([x.size(1) for x in result.attentions])
+        max_context_size = max([x.size(2) for x in result.attentions])
+        
+        for token_index, attn_map in enumerate(result.attentions):
+            # attn_map := (generated_tokens, layers(32), context_size, head)
+            attn_map = attn_map[-1] # -> (layers(32), context_size, head)
+            attn_map = torch.mean(attn_map, dim=2) # (layers(32), context_size)
+            layer_count, context_size = attn_map.shape
+            expanded_map = torch.zeros((max_layer_count, max_context_size), dtype=torch.float, device='cpu')
+            expanded_map[:,:] = torch.nan
+            expanded_map[:layer_count, :context_size] = attn_map
+            map = go.Heatmap(
+                z=expanded_map.to('cpu', dtype=torch.float),
+                xgap=1, ygap=1,
+                zmin=0, zmax=1,
+                showscale=False,
+            )
+            heatmaps.append((map, layer_count, context_size))
+        
+        W = 800
+        H = 400
+        space = 0.2 / len(heatmaps)
+        fig = make_subplots(
+            rows=len(heatmaps)+1,
+            cols=1,
+            subplot_titles=[""] + [
+                f'token{i} "{t}"' for i, t
+                in enumerate(result.output_tokens[0][len(result.input_tokens[0]):], start=len(result.input_tokens[0]))
+            ],
+            vertical_spacing=space,
+            row_heights=[0.05] + [1] * len(heatmaps),
+        )
+        for token_index, (map, layer_count, ctx_size) in enumerate(heatmaps):
+            row = token_index + 2
+            fig.add_trace(map, row=row, col=1)
+            # 長すぎると見づらいので最大3文字にしておく
+            xticks = [x[:3] for x in result.output_tokens[0][:ctx_size]] + [""] * (max_context_size - ctx_size)
+            fig.update_xaxes(
+                row=row, col=1,
+                tickvals=list(range(max_context_size)),
+                ticktext=xticks,
+            )
+            fig.update_yaxes(
+                row=row, col=1,
+                tickvals=list(range(max_layer_count)),
+                ticktext=[str(x) for x in range(layer_count)] + [""] * (max_layer_count - layer_count),
+                autorange="reversed",
+            )
+        fig.update_layout(
+            #**{ f"xaxis{i+1}": dict(side="top") for i in range(len(heatmaps)+1) },
+            width=W,
+            height=H*len(heatmaps) + 0.05*H,
+        )
+        
         return [
             header + content + "</div></label>",
             result.output,
+            fig,
             gr.update(value=info, visible=True),
             gr.update(value="", visible=False),
         ]
@@ -142,6 +239,7 @@ def main_wrap(*args, **kwargs):
         return [
             "",
             "",
+            None,
             gr.update(value="", visible=False),
             gr.update(value=str(e), visible=True),
         ]

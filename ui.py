@@ -48,13 +48,13 @@ def ui(main: Callable):
                     with gr.Column():
                         result = gr.HTML(label="Output", value='<label>Output<div class="output"></div></label>', elem_id="output", elem_classes="output")
                         gr.HTML(elem_id="output_token_info", elem_classes="output_token_info")
-                        info = gr.Textbox(label="Info", elem_id="output_info", elem_classes="output_info", interactive=False)
-                        error = gr.Textbox(label="Errors", interactive=False, visible=False)
+                        info = gr.Textbox(label="Info", lines=5, elem_id="output_info", elem_classes="output_info", interactive=False)
+                        error = gr.Textbox(label="Errors", lines=5, interactive=False, visible=False)
                 with gr.Tab("Original"):
                     result_original = gr.Textbox(value="", label="Output", lines=50, max_lines=50, interactive=False)
         
         with gr.Tab("Attentions"):
-            pass
+            attn_graph = gr.Plot()
         
         inputs = [
             prompt,
@@ -69,6 +69,6 @@ def ui(main: Callable):
             top_p,
         ]
         
-        run.click(main, inputs=inputs, outputs=[result, result_original, info, error])
+        run.click(main, inputs=inputs, outputs=[result, result_original, attn_graph, info, error])
     
     return demo
