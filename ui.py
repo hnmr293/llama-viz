@@ -7,7 +7,7 @@ def R(min, max, value, step=None):
         d["step"] = step
     return d
 
-def ui(main: Callable):
+def ui(main: Callable, attn: Callable):
     
     with gr.Blocks(analytics_enabled=False, css="./default.css", js="./default.js") as demo:
         
@@ -16,7 +16,7 @@ def ui(main: Callable):
                 with gr.Column():
                     prompt = gr.Textbox(lines=5, value="こんにちは。", placeholder="input prompt here", label="Prompt")
                     seed = gr.Number(value=-1, label="seed")
-                    run = gr.Button(value="Run", variant="primary")
+                    run = gr.Button(value="Run", variant="primary", elem_id="run")
                     
                     with gr.Accordion(label="Params", open=False):
                         with gr.Accordion(label="Generation Config"):
@@ -54,7 +54,14 @@ def ui(main: Callable):
                     result_original = gr.Textbox(value="", label="Output", lines=50, max_lines=50, interactive=False)
         
         with gr.Tab("Attentions"):
-            attn_graph = gr.Plot()
+            attn_show = gr.Radio(choices=["All", "Selected", "None"], value="Selected", label="Visibility")
+            attn_select = gr.HTML(value='<label>Output<div class="output"></div></label>', elem_classes="output attn")
+            attn_select_clear = gr.Button(value="Clear Selection")
+            attn_graph_create = gr.Button(value="Show", variant="primary")
+            attn_graph = gr.Plot(visible=False)
+
+            attn_select_clear.click(None, [], [], js='_ => Array.from(document.querySelectorAll(".output.attn .token")).forEach(z => z.classList.remove("selected")) || []')
+            attn_graph_create.click(attn, inputs=[attn_show], outputs=[attn_graph], js='x => [[x, ...Array.from(document.querySelectorAll(".output.attn .token.selected")).map(z => z.dataset.tokenPos)]]')
         
         inputs = [
             prompt,
@@ -69,6 +76,6 @@ def ui(main: Callable):
             top_p,
         ]
         
-        run.click(main, inputs=inputs, outputs=[result, result_original, attn_graph, info, error])
+        run.click(main, inputs=inputs, outputs=[result, result_original, attn_select, info, error])
     
     return demo

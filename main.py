@@ -1,8 +1,14 @@
+# todo
+# 乱数シード 整数
+# hovertemplate
+# repo_id選択
+
 from dataclasses import dataclass
 import html
 import re
 import time
 
+import numpy as np
 import torch
 import einops
 import gradio as gr
@@ -41,6 +47,8 @@ time={self.time/1000000:.1f}ms
 """
 
 
+
+_last_generation_result: GenerationResult|None = None
 
 def retrieve_attentions(attentions: tuple[tuple[torch.Tensor]]):
     # attensions:
@@ -153,6 +161,8 @@ def main(prompt, *args):
     return out, info
 
 def main_wrap(*args, **kwargs):
+    global _last_generation_result
+    
     try:
         result, info = main(*args, **kwargs)
         
@@ -168,68 +178,14 @@ def main_wrap(*args, **kwargs):
 
         header = '<label>Output<div class="output">'
         content = "".join(result_html).replace("&lt;|newline|&gt;", "&lt;|newline|&gt;<br/>")
+        content = header + content + "</div></label>"
         
-        # create heapmaps
-        heatmaps = []
-        
-        max_layer_count = max([x.size(1) for x in result.attentions])
-        max_context_size = max([x.size(2) for x in result.attentions])
-        
-        for token_index, attn_map in enumerate(result.attentions):
-            # attn_map := (generated_tokens, layers(32), context_size, head)
-            attn_map = attn_map[-1] # -> (layers(32), context_size, head)
-            attn_map = torch.mean(attn_map, dim=2) # (layers(32), context_size)
-            layer_count, context_size = attn_map.shape
-            expanded_map = torch.zeros((max_layer_count, max_context_size), dtype=torch.float, device='cpu')
-            expanded_map[:,:] = torch.nan
-            expanded_map[:layer_count, :context_size] = attn_map
-            map = go.Heatmap(
-                z=expanded_map.to('cpu', dtype=torch.float),
-                xgap=1, ygap=1,
-                zmin=0, zmax=1,
-                showscale=False,
-            )
-            heatmaps.append((map, layer_count, context_size))
-        
-        W = 800
-        H = 400
-        space = 0.2 / len(heatmaps)
-        fig = make_subplots(
-            rows=len(heatmaps)+1,
-            cols=1,
-            subplot_titles=[""] + [
-                f'token{i} "{t}"' for i, t
-                in enumerate(result.output_tokens[0][len(result.input_tokens[0]):], start=len(result.input_tokens[0]))
-            ],
-            vertical_spacing=space,
-            row_heights=[0.05] + [1] * len(heatmaps),
-        )
-        for token_index, (map, layer_count, ctx_size) in enumerate(heatmaps):
-            row = token_index + 2
-            fig.add_trace(map, row=row, col=1)
-            # 長すぎると見づらいので最大3文字にしておく
-            xticks = [x[:3] for x in result.output_tokens[0][:ctx_size]] + [""] * (max_context_size - ctx_size)
-            fig.update_xaxes(
-                row=row, col=1,
-                tickvals=list(range(max_context_size)),
-                ticktext=xticks,
-            )
-            fig.update_yaxes(
-                row=row, col=1,
-                tickvals=list(range(max_layer_count)),
-                ticktext=[str(x) for x in range(layer_count)] + [""] * (max_layer_count - layer_count),
-                autorange="reversed",
-            )
-        fig.update_layout(
-            #**{ f"xaxis{i+1}": dict(side="top") for i in range(len(heatmaps)+1) },
-            width=W,
-            height=H*len(heatmaps) + 0.05*H,
-        )
+        _last_generation_result = result
         
         return [
-            header + content + "</div></label>",
+            content,
             result.output,
-            fig,
+            content,
             gr.update(value=info, visible=True),
             gr.update(value="", visible=False),
         ]
@@ -239,13 +195,106 @@ def main_wrap(*args, **kwargs):
         return [
             "",
             "",
-            None,
+            "",
             gr.update(value="", visible=False),
             gr.update(value=str(e), visible=True),
         ]
 
+def attn(args: tuple):
+    type, *selected = args
+    result = _last_generation_result
+    
+    if result is None:
+        return gr.update(value=None, visible=False)
+    
+    if type == "All":
+        selected = list(range(result.input_ids.size(-1), result.output_ids.size(-1)))
+    elif type == "Selected":
+        if len(selected) == 0:
+            return gr.update(value=None, visible=False)
+        selected = [int(x) for x in selected]
+    else:
+        return gr.update(value=None, visible=False)
+
+    # create heapmaps
+    heatmaps = []
+    
+    max_layer_count = max([x.size(1) for x in result.attentions])
+    max_context_size = max([x.size(2) for x in result.attentions])
+    
+    for token_index, attn_map in enumerate(result.attentions, start=result.input_ids.size(-1)):
+        if token_index not in selected:
+            continue
+        
+        # attn_map := (generated_tokens, layers(32), context_size, head)
+        
+        token = result.output_tokens[0][token_index]
+        attn_map = attn_map[-1] # -> (layers(32), context_size, head)
+        attn_map = torch.mean(attn_map, dim=2) # (layers(32), context_size)
+        layer_count, context_size = attn_map.shape
+        expanded_map = torch.zeros((max_layer_count, max_context_size), dtype=torch.float, device='cpu')
+        expanded_map[:,:] = torch.nan
+        expanded_map[:layer_count, :context_size] = attn_map
+        map = go.Heatmap(
+            z=expanded_map.to('cpu', dtype=torch.float),
+            xgap=1, ygap=1,
+            zmin=0, zmax=1,
+            showscale=False,
+        )
+        heatmaps.append((map, layer_count, context_size, token_index, token))
+    
+    if len(heatmaps) == 0:
+        return gr.update(value=None, visible=False)
+    
+    W = 800
+    H = 400
+    space = 0.2 / len(heatmaps)
+    fig = make_subplots(
+        rows=len(heatmaps)+1,
+        cols=1,
+        subplot_titles=[""] + [
+            f'token{t[-2]} "{t[-1]}"' for t in heatmaps
+        ],
+        vertical_spacing=space,
+        row_heights=[0.05] + [1] * len(heatmaps),
+    )
+    for index, (map, layer_count, ctx_size, _, _) in enumerate(heatmaps):
+        row = index + 2
+        fig.add_trace(map, row=row, col=1)
+        # 長すぎると見づらいので最大3文字にしておく
+        xticks_long = [x for x in result.output_tokens[0][:ctx_size]] + [""] * (max_context_size - ctx_size)
+        xticks = [x[:3] for x in xticks_long]
+        fig.update_xaxes(
+            row=row, col=1,
+            tickvals=list(range(max_context_size)),
+            ticktext=xticks,
+        )
+        fig.update_yaxes(
+            row=row, col=1,
+            tickvals=list(range(max_layer_count)),
+            ticktext=[str(x) for x in range(layer_count)] + [""] * (max_layer_count - layer_count),
+            autorange="reversed",
+        )
+        fig.update_traces(
+            row=row, col=1,
+            hovertemplate='layer=%{y}<br>value=%{z}',
+            #hovertemplate='token=%{customdata[0]} "%{customdata[1]}"<br>layer=%{y}<br>value=%{z}',
+            #customdata=np.dstack((
+            #    result.output_ids.to("cpu").reshape((1,1,-1)).repeat((1,max_layer_count,1)),
+            #    np.array(result.output_tokens).reshape((1,1,-1)).repeat(max_layer_count, axis=1)
+            #))
+
+        )
+    fig.update_layout(
+        #**{ f"xaxis{i+1}": dict(side="top") for i in range(len(heatmaps)+1) },
+        #width=W,
+        height=H*len(heatmaps) + 0.05*H,
+    )
+    
+    return gr.update(value=fig, visible=True)
+
 
 
 if __name__ == "__main__":
-    demo = ui(main_wrap)
+    demo = ui(main_wrap, attn)
     demo.launch()

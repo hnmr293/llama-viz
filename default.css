@@ -34,3 +34,7 @@
 .output_info textarea {
     font-family: 'Roboto Mono', monospace;
 }
+
+.token.selected {
+    background-color: rgba(255,128,128,0.25) !important;
+}
