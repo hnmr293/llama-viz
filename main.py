@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import html
 import re
+import time
 
 import torch
 import gradio as gr
@@ -24,10 +25,14 @@ class GenerationResult:
 class GenerationInfo:
     device: torch.device
     seed: int
+    time: int
+    time_per_token: float
 
     def __str__(self):
         return f"""seed={self.seed}
 device={self.device.type}:{self.device.index}
+time={self.time/1000000:.1f}ms
+     {self.time_per_token/1000000:.1f}ms/token ({1000000000/self.time_per_token:.1f}tokens/s)
 """
 
 def main(prompt, *args):
@@ -72,6 +77,11 @@ def main(prompt, *args):
     print("Prompt =", prompt)
     print("Args =", generate_args)
     
+    # 
+    # Generate!
+    # 
+    t0 = time.perf_counter_ns()
+
     output = model.model.generate(
         input_ids=input_ids.to(model.device),
         **generate_args,
@@ -81,6 +91,10 @@ def main(prompt, *args):
         output_hidden_states=False,
         return_dict_in_generate=True,
     )
+
+    t1 = time.perf_counter_ns()
+
+    print(f"Finished! [{(t1-t0)/1000000:.2f}ms]")
     
     output_ids = output.sequences
     result = model.tokenizer.decode(output_ids[0,:], skip_special_tokens=False, clean_up_tokenization_spaces=True)
@@ -96,6 +110,8 @@ def main(prompt, *args):
     info = GenerationInfo(
         device=model.model.device,
         seed=seed,
+        time=t1-t0,
+        time_per_token=(t1-t0)/(output_ids.numel() - input_ids.numel())
     )
     
     return out, info

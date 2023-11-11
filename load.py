@@ -23,13 +23,19 @@ class Model:
 _loaded_model: Model|None = None
 
 def load_model(repo_id: str, model_args: dict, tokenizer_args: dict) -> Model:
+    import time
+    print("start model loading...")
+    t0 = time.perf_counter_ns()
+
     model_args["cache_dir"] = "./models"
     tokenizer_args["cache_dir"] = "./models"
 
     model = AutoModelForCausalLM.from_pretrained(repo_id, **model_args)
     tokenizer = AutoTokenizer.from_pretrained(repo_id, **tokenizer_args)
     streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-    print(f"model loaded: {repo_id}")
+    
+    t1 = time.perf_counter_ns()
+    print(f"model loaded: {repo_id} [{(t1-t0)/1000000:.1f}ms]")
     return Model(repo_id, model, tokenizer, streamer)
 
 
