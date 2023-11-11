@@ -1,5 +1,4 @@
 # todo
-# 乱数シード 整数
 # hovertemplate
 # repo_id選択
 
@@ -40,7 +39,7 @@ class GenerationInfo:
     time_per_token: float
 
     def __str__(self):
-        return f"""seed={self.seed}
+        return f"""seed={self.seed:d}
 device={self.device.type}:{self.device.index}
 time={self.time/1000000:.1f}ms
      {self.time_per_token/1000000:.1f}ms/token ({1000000000/self.time_per_token:.1f}tokens/s)
