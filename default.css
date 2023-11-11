@@ -1,0 +1,36 @@
+@import url(https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@200);
+
+.output {
+    padding: var(--block-padding);
+    border: 1px solid var(--border-color-primary);
+    border-radius: var(--block-radius);
+    background: var(--block-background-fill);
+    line-height: 2;
+}
+
+.output .token {
+    margin: 2px;
+    text-decoration: underline;
+    text-decoration-color: #ccc;
+    text-underline-offset: 5px;
+}
+
+.output .token .special {
+    font-family: 'Roboto Mono', monospace;
+    color: #888;
+    font-size: smaller;
+}
+
+.output .token:hover {
+    background-color: rgba(255,255,255,0.25);
+}
+
+.output_token_info {
+    font-family: 'Roboto Mono', monospace;
+    min-height: 3em;
+    padding: 0.5em;
+}
+
+.output_info textarea {
+    font-family: 'Roboto Mono', monospace;
+}

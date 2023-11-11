@@ -1,16 +1,23 @@
+# cu118:
+#   https://download.pytorch.org/whl/cu118
+#   https://huggingface.github.io/autogptq-index/whl/cu118/
+
+# recommends for cu118:
+# $ pip install wheel
+# $ pip install torch torchvision torchaudio --index-url=https://download.pytorch.org/whl/cu118
+# $ pip install accelerate "transformers>=4.34.1" optimum gradio
+# $ pip install auto-gptq --extra-index-url=https://huggingface.github.io/autogptq-index/whl/cu118/
+
+
 wheel
 
---index-url https://download.pytorch.org/whl/cu118
 torch
 torchvision
 torchaudio
 
---index-url https://huggingface.github.io/autogptq-index/whl/cu118/
-auto-gptq
-
---index-url
 accelerate
 transformers>="4.34.1"
 optimum
+auto-gptq
 
 gradio
