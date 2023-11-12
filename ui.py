@@ -32,7 +32,7 @@ def ui(main: Callable, attn: Callable):
                     with gr.Group():
                         prompt = gr.Textbox(lines=5, value="こんにちは。", placeholder="input prompt here", label="Prompt")
                         seed = gr.Number(value=-1, label="seed")
-                    run = gr.Button(value="Run", variant="primary", elem_id="run")
+                    run = gr.Button(value="Run (Ctrl+Enter)", variant="primary", elem_id="run")
                     
                     with gr.Accordion(label="Params", open=False):
                         with gr.Accordion(label="Generation Config"):
@@ -86,7 +86,7 @@ def ui(main: Callable, attn: Callable):
                     zscale.change(toggle_scale, inputs=[zscale], outputs=[attn_scale_linear, attn_scale_log])
             attn_select = gr.HTML(value='<label>Output<div class="output"></div></label>', elem_classes="output attn")
             attn_select_clear = gr.Button(value="Clear Selection")
-            attn_graph_create = gr.Button(value="Show", variant="primary")
+            attn_graph_create = gr.Button(value="Show (Ctrl+Shift+Enter)", variant="primary", elem_id="show-attn")
             attn_graph = gr.Plot(visible=False)
 
             attn_dummy = gr.Textbox(visible=False)

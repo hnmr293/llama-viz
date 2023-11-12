@@ -23,11 +23,20 @@
 
     document.addEventListener("keydown", e => {
         if (e.ctrlKey && (e.code == "Enter" || e.code == "NumpadEnter")) {
-            const button = document.querySelector("button.primary#run");
-            if (button) {
-                e.preventDefault();
-                e.stopPropagation();
-                button.click();
+            if (!e.shiftKey) {
+                const button = document.querySelector("button.primary#run");
+                if (button) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    button.click();
+                }
+            } else {
+                const button = document.querySelector("button#show-attn");
+                if (button) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    button.click();
+                }
             }
         }
     }, { capture: true });
