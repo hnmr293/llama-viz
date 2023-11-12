@@ -22,6 +22,7 @@ def ui(main: Callable, attn: Callable):
                             model_rev = gr.Textbox(value="", placeholder="if exists, put model revision here", label="Model revision")
                         cache_dir = gr.Textbox(value=f"{os.path.dirname(__file__)}/models", placeholder="put path to cache dir here", label="Cache dir")
                         local_only = gr.Checkbox(value=False, label="Local only")
+                        trust_remote_code = gr.Checkbox(value=False, label="trust_remote_code")
                         #model_path = gr.Textbox(value="", placeholder="put path to the model here", label="Model path", visible=False)
                         #def hf_or_local_callback(v: str):
                         #    if v == "HF":
@@ -105,6 +106,7 @@ def ui(main: Callable, attn: Callable):
             model_rev,
             cache_dir,
             local_only,
+            trust_remote_code,
             #model_path,
             prompt,
             seed,

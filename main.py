@@ -91,6 +91,7 @@ def main(
     model_rev: str,
     cache_dir: str,
     local_only: bool,
+    trust_remote_code: bool,
     #model_path: str,
     prompt: str,
     *args
@@ -120,6 +121,10 @@ def main(
     if local_only:
         model_args["local_files_only"] = True
         tokenizer_args["local_files_only"] = True
+
+    if trust_remote_code:
+        model_args["trust_remote_code"] = True
+        tokenizer_args["trust_remote_code"] = True
 
     model = reload_model_hf(model_id, model_rev, model_args, tokenizer_args)
     input_ids = model.tokenizer.encode(prompt, return_tensors="pt")
