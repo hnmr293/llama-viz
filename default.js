@@ -24,9 +24,13 @@
     document.addEventListener("keydown", e => {
         if (e.ctrlKey && (e.code == "Enter" || e.code == "NumpadEnter")) {
             const button = document.querySelector("button.primary#run");
-            if (button) button.click();
+            if (button) {
+                e.preventDefault();
+                e.stopPropagation();
+                button.click();
+            }
         }
-    });
+    }, { capture: true });
 
     document.querySelector(".output.attn").addEventListener("mousedown", e => {
         let target = e.target;
