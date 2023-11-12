@@ -114,6 +114,17 @@ def main(
     model_args = { "device_map": "auto" }
     tokenizer_args = { "device_map": "auto" }
     
+    if seed is None or len(seed) == 0:
+        seed = -1
+    else:
+        try:
+            base = 10
+            if seed.startswith("0x"):
+                base = 16
+            seed = int(seed, base)
+        except:
+            raise RuntimeError(f"invalid seed: {seed}")
+    
     if cache_dir is not None and len(cache_dir) != 0:
         model_args["cache_dir"] = cache_dir
         tokenizer_args["cache_dir"] = cache_dir
