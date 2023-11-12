@@ -12,7 +12,7 @@ import gradio as gr
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
-from load import reload_model_hf
+from load import reload_model_hf, get_loaded_model_or_default
 from ui import ui
 
 @dataclass
@@ -196,14 +196,18 @@ def main_wrap(*args, **kwargs):
     
     try:
         result, info = main(*args, **kwargs)
+        model = get_loaded_model_or_default()
         
         # create HTML for the token-separated text
         result_html = []
         for i, (id, token) in enumerate(zip(result.output_ids[0], result.output_tokens[0])):
-            token = re.sub(r"\r?\n", '&lt;|newline|&gt;', html.escape(token))
-            if token.startswith("&lt;|"):
-                if token.endswith("|&gt;"):
-                    token = f'<span class="special">{token}</span>'
+            if id in model.tokenizer.all_special_ids:
+                token = f'<span class="special">{html.escape(token)}</span>'
+            else:
+                token = re.sub(r"\r?\n", '&lt;|newline|&gt;', html.escape(token))
+                if token.startswith("&lt;|"):
+                    if token.endswith("|&gt;"):
+                        token = f'<span class="special">{token}</span>'
             ele = f'<span class="token" data-token-pos="{i}" data-token-id="{id}" title="index {i}\nid {id}">{token}</span>'
             result_html.append(ele)
 
