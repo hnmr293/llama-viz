@@ -1,4 +1,5 @@
 from typing import Callable
+import os
 import gradio as gr
 
 def R(min, max, value, step=None):
@@ -14,8 +15,23 @@ def ui(main: Callable, attn: Callable):
         with gr.Tab("Main"):
             with gr.Row():
                 with gr.Column():
-                    prompt = gr.Textbox(lines=5, value="こんにちは。", placeholder="input prompt here", label="Prompt")
-                    seed = gr.Number(value=-1, label="seed")
+                    with gr.Group():
+                        #hf_or_local = gr.Radio(choices=["HF", "Local"], value="HF", label="Load model from")
+                        with gr.Row():
+                            model_id = gr.Textbox(value="meta-llama/Llama-2-7b", placeholder="put repo id here", label="Model repo ID")
+                            model_rev = gr.Textbox(value="", placeholder="if exists, put model revision here", label="Model revision")
+                        cache_dir = gr.Textbox(value=f"{os.path.dirname(__file__)}/models", placeholder="put path to cache dir here", label="Cache dir")
+                        local_only = gr.Checkbox(value=False, label="Local only")
+                        #model_path = gr.Textbox(value="", placeholder="put path to the model here", label="Model path", visible=False)
+                        #def hf_or_local_callback(v: str):
+                        #    if v == "HF":
+                        #        return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False)
+                        #    else:
+                        #        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True)
+                        #hf_or_local.change(hf_or_local_callback, inputs=[], outputs=[model_id, cache_dir, model_path])
+                    with gr.Group():
+                        prompt = gr.Textbox(lines=5, value="こんにちは。", placeholder="input prompt here", label="Prompt")
+                        seed = gr.Number(value=-1, label="seed")
                     run = gr.Button(value="Run", variant="primary", elem_id="run")
                     
                     with gr.Accordion(label="Params", open=False):
@@ -64,6 +80,12 @@ def ui(main: Callable, attn: Callable):
             attn_graph_create.click(attn, inputs=[attn_show], outputs=[attn_graph], js='x => [[x, ...Array.from(document.querySelectorAll(".output.attn .token.selected")).map(z => z.dataset.tokenPos)]]')
         
         inputs = [
+            #hf_or_local,
+            model_id,
+            model_rev,
+            cache_dir,
+            local_only,
+            #model_path,
             prompt,
             seed,
             max_new_tokens,

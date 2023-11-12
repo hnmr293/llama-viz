@@ -1,6 +1,5 @@
 # todo
 # hovertemplate
-# repo_id選択
 
 from dataclasses import dataclass
 import html
@@ -14,7 +13,7 @@ import gradio as gr
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
-from load import get_model
+from load import reload_model_hf
 from ui import ui
 
 @dataclass
@@ -77,7 +76,16 @@ def retrieve_attentions(attentions: tuple[tuple[torch.Tensor]]):
     return attentions
 
 
-def main(prompt, *args):
+def main(
+    #hf_or_local: str,
+    model_id: str,
+    model_rev: str,
+    cache_dir: str,
+    local_only: bool,
+    #model_path: str,
+    prompt: str,
+    *args
+):
     (
         seed,
         max_new_tokens,
@@ -90,7 +98,21 @@ def main(prompt, *args):
         top_p,
     ) = args
     
-    model = get_model()
+    if model_id is None or len(model_id) == 0:
+        raise RuntimeError("repo id is not specified")
+    
+    model_args = { "device_map": "auto" }
+    tokenizer_args = { "device_map": "auto" }
+    
+    if cache_dir is not None and len(cache_dir) != 0:
+        model_args["cache_dir"] = cache_dir
+        tokenizer_args["cache_dir"] = cache_dir
+    
+    if local_only:
+        model_args["local_files_only"] = True
+        tokenizer_args["local_files_only"] = True
+
+    model = reload_model_hf(model_id, model_rev, model_args, tokenizer_args)
     input_ids = model.tokenizer.encode(prompt, return_tensors="pt")
     
     if seed < 0:
@@ -189,7 +211,7 @@ def main_wrap(*args, **kwargs):
             gr.update(value=info, visible=True),
             gr.update(value="", visible=False),
         ]
-    except RuntimeError as e:
+    except Exception as e:
         import sys, traceback
         traceback.print_exc(file=sys.stderr)
         return [
