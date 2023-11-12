@@ -96,6 +96,7 @@ def main(prompt, *args):
     if seed < 0:
         seed = torch.seed()
     else:
+        seed = int(seed)
         torch.manual_seed(seed)
     
     generate_args = {}
