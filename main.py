@@ -2,6 +2,8 @@ from dataclasses import dataclass
 import html
 import re
 import time
+import math
+import json
 
 import numpy as np
 import torch
@@ -219,13 +221,26 @@ def main_wrap(*args, **kwargs):
             gr.update(value=str(e), visible=True),
         ]
 
-def attn(args: tuple):
-    type, *selected = args
+def attn(type: str, zmin: float, zmax: float, selected_json: str):
+    zmin = float(zmin)
+    zmax = float(zmax)
+    if not math.isfinite(zmin) or not math.isfinite(zmax):
+        print("invalid z_min/z_max value(s):")
+        print("  z_min = ", zmin)
+        print("  z_max = ", zmax)
+        print("z_min = 0, z_max = 1 will be used instead.")
+        zmin = 0.0
+        zmax = 1.0
+
+    if zmax < zmin:
+        zmin, zmax = zmax, zmin
+    
     result = _last_generation_result
     
     if result is None:
         return gr.update(value=None, visible=False)
     
+    selected = json.loads(selected_json)
     if type == "All":
         selected = list(range(result.input_ids.size(-1), result.output_ids.size(-1)))
     elif type == "Selected":
@@ -257,7 +272,7 @@ def attn(args: tuple):
         map = go.Heatmap(
             z=expanded_map.to('cpu', dtype=torch.float),
             xgap=1, ygap=1,
-            zmin=0, zmax=1,
+            zmin=zmin, zmax=zmax,
             showscale=False,
         )
         heatmaps.append((map, layer_count, context_size, token_index, token))
@@ -265,7 +280,6 @@ def attn(args: tuple):
     if len(heatmaps) == 0:
         return gr.update(value=None, visible=False)
     
-    W = 800
     H = 400
     space = 0.2 / len(heatmaps)
     fig = make_subplots(

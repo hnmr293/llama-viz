@@ -70,14 +70,20 @@ def ui(main: Callable, attn: Callable):
                     result_original = gr.Textbox(value="", label="Output", lines=50, max_lines=50, interactive=False)
         
         with gr.Tab("Attentions"):
-            attn_show = gr.Radio(choices=["All", "Selected", "None"], value="Selected", label="Visibility")
+            with gr.Group():
+                attn_show = gr.Radio(choices=["All", "Selected", "None"], value="Selected", label="Visibility")
+                with gr.Row():
+                    zmin = gr.Slider(minimum=-1, maximum=2, value=0, step=0.01, label="z_min")
+                    zmax = gr.Slider(minimum=-1, maximum=2, value=1, step=0.01, label="z_max")
             attn_select = gr.HTML(value='<label>Output<div class="output"></div></label>', elem_classes="output attn")
             attn_select_clear = gr.Button(value="Clear Selection")
             attn_graph_create = gr.Button(value="Show", variant="primary")
             attn_graph = gr.Plot(visible=False)
 
+            attn_dummy = gr.Textbox(visible=False)
+
             attn_select_clear.click(None, [], [], js='_ => Array.from(document.querySelectorAll(".output.attn .token")).forEach(z => z.classList.remove("selected")) || []')
-            attn_graph_create.click(attn, inputs=[attn_show], outputs=[attn_graph], js='x => [[x, ...Array.from(document.querySelectorAll(".output.attn .token.selected")).map(z => z.dataset.tokenPos)]]')
+            attn_graph_create.click(attn, inputs=[attn_show, zmin, zmax, attn_dummy], outputs=[attn_graph], js='(x0,x1,x2,x3) => [x0, x1, x2, JSON.stringify(Array.from(document.querySelectorAll(".output.attn .token.selected")).map(z => +z.dataset.tokenPos))]')
         
         inputs = [
             #hf_or_local,
