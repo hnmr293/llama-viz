@@ -16,7 +16,7 @@ The horizotal axis represents the index of the context used to output the new to
 The vertical axis represents the number of the LLaMA's self-attention layer.
 
 The color of the tile indicates the value of the attention weight. Bright (yellow) is high. 
-For example, the following image shows that the 19th layer's attention weight at 6th position of the context is `0.03`. NB. the value is shown on a log10 scale. 10^(-1.52) ≒ 0.03.
+For example, the following image shows that the 19th layer's attention weight at 6th position of the context is `0.03`. NB. in the image, the value is shown on a log10 scale. 10^(-1.52) ≒ 0.03.
 
 ![self attention weights example](./images/example.png)
 
@@ -50,4 +50,4 @@ $ pip install -r requirements.txt
 
 ### Attention Tab
 
-![attention example (en)](image.png)
+![attention example (en)](./images/attn.png)
