@@ -1,6 +1,3 @@
-# todo
-# hovertemplate
-
 from dataclasses import dataclass
 import html
 import re
@@ -299,13 +296,11 @@ def attn(args: tuple):
         )
         fig.update_traces(
             row=row, col=1,
-            hovertemplate='layer=%{y}<br>value=%{z}',
-            #hovertemplate='token=%{customdata[0]} "%{customdata[1]}"<br>layer=%{y}<br>value=%{z}',
-            #customdata=np.dstack((
-            #    result.output_ids.to("cpu").reshape((1,1,-1)).repeat((1,max_layer_count,1)),
-            #    np.array(result.output_tokens).reshape((1,1,-1)).repeat(max_layer_count, axis=1)
-            #))
-
+            hovertemplate='token=%{customdata[0]} "%{customdata[1]}"<br>layer=%{y}<br>value=%{z}',
+            customdata=np.dstack((
+                result.output_ids.repeat((max_layer_count,1)).to("cpu"),
+                np.array(result.output_tokens).repeat(max_layer_count, axis=0)
+            ))
         )
     fig.update_layout(
         #**{ f"xaxis{i+1}": dict(side="top") for i in range(len(heatmaps)+1) },
