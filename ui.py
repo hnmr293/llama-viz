@@ -73,8 +73,17 @@ def ui(main: Callable, attn: Callable):
             with gr.Group():
                 attn_show = gr.Radio(choices=["All", "Selected", "None"], value="Selected", label="Visibility")
                 with gr.Row():
-                    zmin = gr.Slider(minimum=-1, maximum=2, value=0, step=0.01, label="z_min")
-                    zmax = gr.Slider(minimum=-1, maximum=2, value=1, step=0.01, label="z_max")
+                    zsel = gr.Radio(choices=["Mean", "Median", "Max", "Min"], value="Mean", label="Display value (how `num_heads` will be aggregated)")
+                    zscale = gr.Radio(choices=["Linear", "Log10"], value="Linear", label="Scale")
+                    with gr.Group(visible=True) as attn_scale_linear:
+                        zmin = gr.Slider(minimum=-1, maximum=2, value=0, step=0.01, label="z_min")
+                        zmax = gr.Slider(minimum=-1, maximum=2, value=1, step=0.01, label="z_max")
+                    with gr.Group(visible=False) as attn_scale_log:
+                        zmin_log = gr.Slider(minimum=-10, maximum=0, value=-2, step=0.01, label="log(z)_min")
+                        zmax_log = gr.Slider(minimum=-10, maximum=0, value=0, step=0.01, label="log(z)_max")
+                    def toggle_scale(v):
+                        return gr.update(visible=v=="Linear"), gr.update(visible=v=="Log10")
+                    zscale.change(toggle_scale, inputs=[zscale], outputs=[attn_scale_linear, attn_scale_log])
             attn_select = gr.HTML(value='<label>Output<div class="output"></div></label>', elem_classes="output attn")
             attn_select_clear = gr.Button(value="Clear Selection")
             attn_graph_create = gr.Button(value="Show", variant="primary")
@@ -83,7 +92,12 @@ def ui(main: Callable, attn: Callable):
             attn_dummy = gr.Textbox(visible=False)
 
             attn_select_clear.click(None, [], [], js='_ => Array.from(document.querySelectorAll(".output.attn .token")).forEach(z => z.classList.remove("selected")) || []')
-            attn_graph_create.click(attn, inputs=[attn_show, zmin, zmax, attn_dummy], outputs=[attn_graph], js='(x0,x1,x2,x3) => [x0, x1, x2, JSON.stringify(Array.from(document.querySelectorAll(".output.attn .token.selected")).map(z => +z.dataset.tokenPos))]')
+            attn_graph_create.click(
+                attn,
+                inputs=[attn_show, zsel, zscale, zmin, zmax, zmin_log, zmax_log, attn_dummy],
+                outputs=[attn_graph],
+                js='(...xs) => [...xs.slice(0,-2), JSON.stringify(Array.from(document.querySelectorAll(".output.attn .token.selected")).map(z => +z.dataset.tokenPos))]'
+            )
         
         inputs = [
             #hf_or_local,

@@ -43,7 +43,17 @@ time={self.time/1000000:.1f}ms
      {self.time_per_token/1000000:.1f}ms/token ({1000000000/self.time_per_token:.1f}tokens/s)
 """
 
+AttnValueSelector = {
+    "Mean": lambda vs: torch.mean(vs, dim=2),
+    "Median": lambda vs: torch.median(vs, dim=2)[0],
+    "Max": lambda vs: torch.max(vs, dim=2)[0],
+    "Min": lambda vs: torch.min(vs, dim=2)[0],
+}
 
+AttnValueScaler = {
+    "Linear": lambda vs: vs,
+    "Log10": lambda vs: torch.log10(vs),
+}
 
 _last_generation_result: GenerationResult|None = None
 
@@ -221,16 +231,35 @@ def main_wrap(*args, **kwargs):
             gr.update(value=str(e), visible=True),
         ]
 
-def attn(type: str, zmin: float, zmax: float, selected_json: str):
+def attn(
+    type: str,
+    kind: str,
+    scale_type: str,
+    zmin: float, zmax: float,
+    zmin_log: float, zmax_log: float,
+    selected_json: str
+):
     zmin = float(zmin)
     zmax = float(zmax)
-    if not math.isfinite(zmin) or not math.isfinite(zmax):
-        print("invalid z_min/z_max value(s):")
-        print("  z_min = ", zmin)
-        print("  z_max = ", zmax)
-        print("z_min = 0, z_max = 1 will be used instead.")
-        zmin = 0.0
-        zmax = 1.0
+    if scale_type == "Linear":
+        if not math.isfinite(zmin) or not math.isfinite(zmax):
+            print("invalid z_min/z_max value(s):")
+            print("  z_min = ", zmin)
+            print("  z_max = ", zmax)
+            print("z_min = 0, z_max = 1 will be used instead.")
+            zmin = 0.0
+            zmax = 1.0
+    else:
+        if not math.isfinite(zmin_log) or not math.isfinite(zmax_log):
+            print("invalid log(z)_min/log(z)_max value(s):")
+            print("  log(z)_min = ", zmin_log)
+            print("  log(z)_max = ", zmax_log)
+            print("log(z)_min = -2, log(z)_max = 0 will be used instead.")
+            zmin = -2
+            zmax = 0
+        else:
+            zmin = zmin_log
+            zmax = zmax_log
 
     if zmax < zmin:
         zmin, zmax = zmax, zmin
@@ -238,6 +267,9 @@ def attn(type: str, zmin: float, zmax: float, selected_json: str):
     result = _last_generation_result
     
     if result is None:
+        return gr.update(value=None, visible=False)
+    
+    if selected_json is None or len(selected_json) == 0:
         return gr.update(value=None, visible=False)
     
     selected = json.loads(selected_json)
@@ -249,6 +281,9 @@ def attn(type: str, zmin: float, zmax: float, selected_json: str):
         selected = [int(x) for x in selected]
     else:
         return gr.update(value=None, visible=False)
+    
+    value_scaler = AttnValueScaler[scale_type]
+    value_selector = AttnValueSelector[kind]
 
     # create heapmaps
     heatmaps = []
@@ -264,11 +299,15 @@ def attn(type: str, zmin: float, zmax: float, selected_json: str):
         
         token = result.output_tokens[0][token_index]
         attn_map = attn_map[-1] # -> (layers(32), context_size, head)
-        attn_map = torch.mean(attn_map, dim=2) # (layers(32), context_size)
+        attn_map = value_selector(attn_map) # (layers(32), context_size)
+        attn_map = value_scaler(attn_map)
+        #attn_map[attn_map == torch.nan] = zmin
+        
         layer_count, context_size = attn_map.shape
         expanded_map = torch.zeros((max_layer_count, max_context_size), dtype=torch.float, device='cpu')
         expanded_map[:,:] = torch.nan
         expanded_map[:layer_count, :context_size] = attn_map
+        
         map = go.Heatmap(
             z=expanded_map.to('cpu', dtype=torch.float),
             xgap=1, ygap=1,
