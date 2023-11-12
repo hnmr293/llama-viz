@@ -208,7 +208,12 @@ def main_wrap(*args, **kwargs):
                 if token.startswith("&lt;|"):
                     if token.endswith("|&gt;"):
                         token = f'<span class="special">{token}</span>'
-            ele = f'<span class="token" data-token-pos="{i}" data-token-id="{id}" title="index {i}\nid {id}">{token}</span>'
+            klass = ["token"]
+            if i < result.input_ids.size(-1):
+                klass.append("input_token")
+            else:
+                klass.append("output_token")
+            ele = f'<span class="{" ".join(klass)}" data-token-pos="{i}" data-token-id="{id}" title="index {i}\nid {id}">{token}</span>'
             result_html.append(ele)
 
         header = '<label>Output<div class="output">'

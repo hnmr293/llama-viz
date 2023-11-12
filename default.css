@@ -15,6 +15,11 @@
     text-underline-offset: 5px;
 }
 
+.output .token.input_token {
+    text-decoration-color: #888;
+    color: #888;
+}
+
 .output .token .special {
     font-family: 'Roboto Mono', monospace;
     color: #888;
