@@ -133,7 +133,8 @@ def main(
         seed = torch.seed()
     else:
         seed = int(seed)
-        torch.manual_seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
     
     generate_args = {}
     
