@@ -14,6 +14,7 @@ import plotly.graph_objects as go
 
 from load import reload_model_hf, get_loaded_model_or_default
 from ui import ui
+from utils import fix_seed
 
 @dataclass
 class GenerationResult:
@@ -144,8 +145,6 @@ def main(
         seed = torch.seed()
     else:
         seed = int(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
     
     generate_args = {}
     
@@ -173,6 +172,9 @@ def main(
     # 
     t0 = time.perf_counter_ns()
 
+    fix_seed(seed)
+    print("Seed =", seed)
+    
     output = model.model.generate(
         input_ids=input_ids.to(model.device),
         **generate_args,
