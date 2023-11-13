@@ -115,17 +115,6 @@ def main(
     model_args = { "device_map": "auto" }
     tokenizer_args = { "device_map": "auto" }
     
-    if seed is None or len(seed) == 0:
-        seed = -1
-    else:
-        try:
-            base = 10
-            if seed.startswith("0x"):
-                base = 16
-            seed = int(seed, base)
-        except:
-            raise RuntimeError(f"invalid seed: {seed}")
-    
     if cache_dir is not None and len(cache_dir) != 0:
         model_args["cache_dir"] = cache_dir
         tokenizer_args["cache_dir"] = cache_dir
@@ -141,10 +130,14 @@ def main(
     model = reload_model_hf(model_id, model_rev, model_args, tokenizer_args)
     input_ids = model.tokenizer.encode(prompt, return_tensors="pt")
     
+    seed = int(seed)
     if seed < 0:
-        seed = torch.seed()
-    else:
-        seed = int(seed)
+        torch.seed()
+        seed = torch.randint(low=0, high=0xffff_ffff, size=(1,)).item()
+    seed = seed & 0xffff_ffff
+    if seed == 0xffff_ffff:
+        seed = 0xffff_fffe
+        # numpy needs a seed is between 0..2^32-1
     
     generate_args = {}
     

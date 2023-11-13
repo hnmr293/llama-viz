@@ -32,7 +32,7 @@ def ui(main: Callable, attn: Callable):
                         #hf_or_local.change(hf_or_local_callback, inputs=[], outputs=[model_id, cache_dir, model_path])
                     with gr.Group():
                         prompt = gr.Textbox(lines=5, value="こんにちは。", placeholder="input prompt here", label="Prompt")
-                        seed = gr.Textbox(value=-1, placeholder="input seed (-1 for random)", label="Seed")
+                        seed = gr.Number(value=-1, minimum=-1, maximum=0xffff_fffe, precision=0, label="Seed (-1 for random)")
                     run = gr.Button(value="Run (Ctrl+Enter)", variant="primary", elem_id="run")
                     
                     with gr.Accordion(label="Params", open=False):
