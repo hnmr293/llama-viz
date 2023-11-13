@@ -49,6 +49,7 @@ AttnValueSelector = {
     "Median": lambda vs: torch.median(vs, dim=2)[0],
     "Max": lambda vs: torch.max(vs, dim=2)[0],
     "Min": lambda vs: torch.min(vs, dim=2)[0],
+    "2-Norm": lambda vs: torch.linalg.vector_norm(vs, dim=2),
 }
 
 AttnValueScaler = {

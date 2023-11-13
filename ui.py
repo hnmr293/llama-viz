@@ -74,7 +74,7 @@ def ui(main: Callable, attn: Callable):
             with gr.Group():
                 attn_show = gr.Radio(choices=["All", "Selected", "None"], value="Selected", label="Visibility")
                 with gr.Row():
-                    zsel = gr.Radio(choices=["Mean", "Median", "Max", "Min"], value="Mean", label="Display value (how `num_heads` will be aggregated)")
+                    zsel = gr.Radio(choices=["Mean", "Median", "Max", "Min", "2-Norm"], value="Mean", label="Display value (how `num_heads` will be aggregated)")
                     zscale = gr.Radio(choices=["Linear", "Log10"], value="Linear", label="Scale")
                     with gr.Group(visible=True) as attn_scale_linear:
                         zmin = gr.Slider(minimum=-1, maximum=2, value=0, step=0.01, label="z_min")
