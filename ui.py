@@ -1,6 +1,24 @@
 from typing import Callable
 import os
 import gradio as gr
+from huggingface_hub import scan_cache_dir, _CACHED_NO_EXIST
+
+DefaultModelDir = f"{os.path.dirname(__file__)}/models"
+
+def get_models(dir):
+    if not os.path.exists(dir):
+        raise ValueError(f"{dir} is not exist")
+    
+    models = []
+    for cache_info in scan_cache_dir(dir).repos:
+        if cache_info.repo_type != 'model':
+            continue
+        repo_id = cache_info.repo_id
+        for rev in cache_info.revisions:
+            refs = next(iter(rev.refs))
+            models.append(f'{repo_id}:{refs}')
+
+    return 'None', ['None'] + sorted(models)
 
 def R(min, max, value, step=None):
     d = { "minimum": min, "maximum": max, "value": value }
@@ -18,18 +36,17 @@ def ui(main: Callable, attn: Callable):
                     with gr.Group():
                         #hf_or_local = gr.Radio(choices=["HF", "Local"], value="HF", label="Load model from")
                         with gr.Row():
-                            model_id = gr.Textbox(value="meta-llama/Llama-2-7b", placeholder="put repo id here", label="Model repo ID")
-                            model_rev = gr.Textbox(value="", placeholder="if exists, put model revision here", label="Model revision")
-                        cache_dir = gr.Textbox(value=f"{os.path.dirname(__file__)}/models", placeholder="put path to cache dir here", label="Cache dir")
+                            default_model, default_models = get_models(DefaultModelDir)
+                            model_id = gr.Dropdown(choices=default_models, value=default_model, label="Model repo ID", interactive=True)
+                            with gr.Row():
+                                refresh = gr.Button(value="\U0001f504", elem_classes=["refresh", "iconbutton"])
+                                cache_dir = gr.Textbox(value=DefaultModelDir, placeholder="put path to cache dir here", label="Cache dir")
+                                def refresh_models(dir):
+                                    default_model, default_models = get_models(dir)
+                                    return gr.update(choices=default_models, value=default_model, interactive=True)
+                                refresh.click(fn=refresh_models, inputs=[cache_dir], outputs=[model_id])
                         local_only = gr.Checkbox(value=False, label="Local only")
                         trust_remote_code = gr.Checkbox(value=False, label="trust_remote_code")
-                        #model_path = gr.Textbox(value="", placeholder="put path to the model here", label="Model path", visible=False)
-                        #def hf_or_local_callback(v: str):
-                        #    if v == "HF":
-                        #        return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False)
-                        #    else:
-                        #        return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True)
-                        #hf_or_local.change(hf_or_local_callback, inputs=[], outputs=[model_id, cache_dir, model_path])
                     with gr.Group():
                         prompt = gr.Textbox(lines=5, value="こんにちは。", placeholder="input prompt here", label="Prompt")
                         seed = gr.Number(value=-1, minimum=-1, maximum=0xffff_fffe, precision=0, label="Seed (-1 for random)")
@@ -101,13 +118,10 @@ def ui(main: Callable, attn: Callable):
             )
         
         inputs = [
-            #hf_or_local,
             model_id,
-            model_rev,
             cache_dir,
             local_only,
             trust_remote_code,
-            #model_path,
             prompt,
             seed,
             max_new_tokens,

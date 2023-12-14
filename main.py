@@ -88,16 +88,16 @@ def retrieve_attentions(attentions: tuple[tuple[torch.Tensor]]):
 
 
 def main(
-    #hf_or_local: str,
     model_id: str,
-    model_rev: str,
     cache_dir: str,
     local_only: bool,
     trust_remote_code: bool,
-    #model_path: str,
     prompt: str,
     *args
 ):
+    if model_id == 'None':
+        return None, None
+    
     (
         seed,
         max_new_tokens,
@@ -128,6 +128,8 @@ def main(
         model_args["trust_remote_code"] = True
         tokenizer_args["trust_remote_code"] = True
 
+    model_rev = model_id.rindex(":")
+    model_id, model_rev = model_id[:model_rev], model_id[model_rev+1:]
     model = reload_model_hf(model_id, model_rev, model_args, tokenizer_args)
     input_ids = model.tokenizer.encode(prompt, return_tensors="pt")
     
@@ -209,6 +211,15 @@ def main_wrap(*args, **kwargs):
     
     try:
         result, info = main(*args, **kwargs)
+        if result is None:
+            return [
+                "",
+                "",
+                "",
+                gr.update(value="", visible=True),
+                gr.update(value="", visible=False),
+            ]
+
         model = get_loaded_model_or_default()
         
         # create HTML for the token-separated text
@@ -388,5 +399,12 @@ def attn(
 
 
 if __name__ == "__main__":
+    import time
+    t0 = time.perf_counter()
+    
     demo = ui(main_wrap, attn)
+    
+    t1 = time.perf_counter()
+    print(f"launch: {(t1-t0)*1000:.1f}ms")
+    
     demo.launch()

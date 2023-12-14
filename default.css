@@ -1,5 +1,10 @@
 @import url(https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@200);
 
+.iconbutton {
+    max-width: 2.2em !important;
+    min-width: 2.2em !important;
+}
+
 .output {
     padding: var(--block-padding);
     border: 1px solid var(--border-color-primary);
