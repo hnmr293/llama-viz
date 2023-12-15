@@ -129,8 +129,11 @@ def main(
         model_args["trust_remote_code"] = True
         tokenizer_args["trust_remote_code"] = True
 
-    model_rev = model_id.rindex(":")
-    model_id, model_rev = model_id[:model_rev], model_id[model_rev+1:]
+    model_rev = model_id.rfind(":")
+    if model_rev < 0:
+        model_rev = None
+    else:
+        model_id, model_rev = model_id[:model_rev], model_id[model_rev+1:]
     model = reload_model_hf(model_id, model_rev, model_args, tokenizer_args)
     input_ids = model.tokenizer.encode(prompt, return_tensors="pt")
     

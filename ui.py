@@ -33,7 +33,7 @@ def main_tab():
                 #hf_or_local = gr.Radio(choices=["HF", "Local"], value="HF", label="Load model from")
                 with gr.Row():
                     default_model, default_models = get_models(DefaultModelDir)
-                    model_id = gr.Dropdown(choices=default_models, value=default_model, label="Model repo ID", interactive=True)
+                    model_id = gr.Dropdown(choices=default_models, value=default_model, label="Model repo ID", interactive=True, allow_custom_value=True)
                     with gr.Row():
                         refresh = gr.Button(value="\U0001f504", elem_classes=["refresh", "iconbutton"])
                         cache_dir = gr.Textbox(value=DefaultModelDir, placeholder="put path to cache dir here", label="Cache dir")
