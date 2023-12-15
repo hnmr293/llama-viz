@@ -147,9 +147,11 @@ def hidden_states_tab(show_states: Callable):
     with gr.Group():
         show = gr.Radio(choices=['All', 'Selected', 'None'], value='Selected', label='Visibility')
         with gr.Row():
-            base_layer = gr.Number(value=0, label="Base layer", info='0: embedding, >0: after LlamaDecoderLayer(s)')
-            norm = gr.Radio(choices=['Absolute', 'Ignore', 'Relative to base layer', 'Relative to previous layer'], value='Relative to base layer', label='Norm')
-            angle = gr.Radio(choices=['Relative to base layer', 'Relative to previous layer'], value='Relative to base layer', label='Angle')
+            base_layer = gr.Number(value=0, label="Base layer", info='0: before first LlamaDecoderLayer, >0: after LlamaDecoderLayer(s)')
+            norm = gr.Radio(choices=['Absolute', 'Ignore', 'Relative to base layer', 'Relative to previous layer'], value='Relative to base layer',
+                            label='Norm', info='Ignore: always 1, Relative to: ||current||/||reference||')
+            angle = gr.Radio(choices=['Relative to base layer', 'Relative to previous layer'], value='Relative to base layer',
+                             label='Angle', info='Relative to: Arg(current - reference)')
     select = gr.HTML(value='<label>Output<div class="output"></div></label>', elem_classes="output hidden_states")
     select_clear = gr.Button(value="Clear Selection")
     graph_create = gr.Button(value="Show", variant="primary")
