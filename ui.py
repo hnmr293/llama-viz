@@ -141,7 +141,31 @@ def attn_tab(attn: Callable):
 
     return attn_select
 
-def ui(main: Callable, attn: Callable):
+def hidden_states_tab(show_states: Callable):
+    #mode = gr.Radio(choices=['Tokens', 'Layers'], value='Tokens', label='Graphs')
+    #base_token = gr.
+    with gr.Group():
+        show = gr.Radio(choices=['All', 'Selected', 'None'], value='Selected', label='Visibility')
+        base_layer = gr.Number(value=0, label="Base layer")
+        only_angle = gr.Checkbox(value=False, label="Only angle")
+    select = gr.HTML(value='<label>Output<div class="output"></div></label>', elem_classes="output hidden_states")
+    select_clear = gr.Button(value="Clear Selection")
+    graph_create = gr.Button(value="Show", variant="primary")
+    graph = gr.Plot(visible=False)
+
+    dummy = gr.Textbox(visible=False)
+
+    select_clear.click(None, [], [], js='_ => Array.from(document.querySelectorAll(".output.hidden_states .token")).forEach(z => z.classList.remove("selected")) || []')
+    graph_create.click(
+        show_states,
+        inputs=[show, base_layer, only_angle, dummy],
+        outputs=[graph],
+        js='(...xs) => [...xs.slice(0,-2), JSON.stringify(Array.from(document.querySelectorAll(".output.hidden_states .token.selected")).map(z => +z.dataset.tokenPos))]'
+    )
+
+    return select
+
+def ui(main: Callable, attn: Callable, states: Callable):
     
     with gr.Blocks(analytics_enabled=False, css="./default.css", js="./default.js") as demo:
         
@@ -151,6 +175,9 @@ def ui(main: Callable, attn: Callable):
         with gr.Tab("Attentions"):
             attn_select = attn_tab(attn)
         
-        run.click(main, inputs=inputs_main, outputs=[result, result_original, attn_select, info, error])
+        with gr.Tab("Hidden States"):
+            hidden_states_select = hidden_states_tab(states)
+        
+        run.click(main, inputs=inputs_main, outputs=[result, result_original, attn_select, hidden_states_select, info, error])
     
     return demo

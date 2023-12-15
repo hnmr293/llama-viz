@@ -46,6 +46,14 @@
         if (target.classList.contains("special")) target = target.parentNode;
         if (!target.classList.contains("token")) return;
         target.classList.toggle("selected");
-});
+    });
+
+    document.querySelector(".output.hidden_states").addEventListener("mousedown", e => {
+        let target = e.target;
+        if (target.classList.contains("special")) target = target.parentNode;
+        if (!target.classList.contains("token")) return;
+        if (!target.classList.contains("output_token")) return;
+        target.classList.toggle("selected");
+    });
 
 })
