@@ -146,8 +146,10 @@ def hidden_states_tab(show_states: Callable):
     #base_token = gr.
     with gr.Group():
         show = gr.Radio(choices=['All', 'Selected', 'None'], value='Selected', label='Visibility')
-        base_layer = gr.Number(value=0, label="Base layer")
-        only_angle = gr.Checkbox(value=False, label="Only angle")
+        with gr.Row():
+            base_layer = gr.Number(value=0, label="Base layer", info='0: embedding, >0: after LlamaDecoderLayer(s)')
+            norm = gr.Radio(choices=['Absolute', 'Ignore', 'Relative to base layer', 'Relative to previous layer'], value='Relative to base layer', label='Norm')
+            angle = gr.Radio(choices=['Relative to base layer', 'Relative to previous layer'], value='Relative to base layer', label='Angle')
     select = gr.HTML(value='<label>Output<div class="output"></div></label>', elem_classes="output hidden_states")
     select_clear = gr.Button(value="Clear Selection")
     graph_create = gr.Button(value="Show", variant="primary")
@@ -158,7 +160,7 @@ def hidden_states_tab(show_states: Callable):
     select_clear.click(None, [], [], js='_ => Array.from(document.querySelectorAll(".output.hidden_states .token")).forEach(z => z.classList.remove("selected")) || []')
     graph_create.click(
         show_states,
-        inputs=[show, base_layer, only_angle, dummy],
+        inputs=[show, base_layer, norm, angle, dummy],
         outputs=[graph],
         js='(...xs) => [...xs.slice(0,-2), JSON.stringify(Array.from(document.querySelectorAll(".output.hidden_states .token.selected")).map(z => +z.dataset.tokenPos))]'
     )

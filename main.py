@@ -404,7 +404,8 @@ def attn(
 def hidden_states_vectors(
     type: str,
     base_layer: int,
-    only_angle: bool,
+    norm_type: str,
+    angle_type: str,
     selected_json: str,
 ):
     base_layer = int(base_layer)
@@ -449,15 +450,43 @@ def hidden_states_vectors(
         
         # 内積の計算誤差を小さくするために double にしておく
         hidden_state = hidden_state.to(dtype=torch.float64, device='cpu')
+        
+        # ノルム計算
         norms = torch.linalg.vector_norm(hidden_state, ord=2, dim=1)
         ns.append(norms.numpy())
+        if norm_type == 'Absolute':
+            reg_norms = norms
+        elif norm_type == 'Relative to base layer':
+            reg_norms = norms.div(norms[base_layer])
+        elif norm_type == 'Relative to previous layer':
+            norms_ = [1.0]
+            for x in range(norms.size(0)-1):
+                a = norms[x]
+                b = norms[x+1]
+                norms_.append((b/a).item())
+            reg_norms = torch.tensor(norms_)
+        elif norm_type == 'Ignore':
+            reg_norms = torch.ones_like(norms)
+        else:
+            raise ValueError(f'unknown norm_type: {norm_type}')
         
+        # 角度計算
         hidden_state = torch.nn.functional.normalize(hidden_state)
-        reg_norms = norms.div(norms[base_layer])
-        thetas = torch.acos(torch.clamp(
-            hidden_state @ hidden_state[base_layer],
-            -1, 1
-        ))
+        if angle_type == 'Relative to base layer':
+            thetas = torch.acos(torch.clamp(
+                hidden_state @ hidden_state[base_layer],
+                -1, 1
+            ))
+        elif angle_type == 'Relative to previous layer':
+            thetas_ = [0.0]
+            for x in range(hidden_state.size(0)-1):
+                a = hidden_state[x]
+                b = hidden_state[x+1]
+                t = torch.acos(torch.clamp(torch.dot(a, b), -1, 1))
+                thetas_.append(t.item())
+            thetas = torch.tensor(thetas_)
+        else:
+            raise ValueError(f'unknown angle_type: {angle_type}')
 
         title = f'{token} ({token_id})'
         titles.append(title)
@@ -467,8 +496,6 @@ def hidden_states_vectors(
         texts = []
         ts_ = []
         for layer, (r, t) in enumerate(zip(reg_norms, thetas)):
-            if only_angle:
-                r = 1.0
             x = r * torch.cos(t)
             y = r * torch.sin(t)
             xs.append(x.item())
