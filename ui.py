@@ -145,12 +145,20 @@ def hidden_states_tab(show_states: Callable):
     #mode = gr.Radio(choices=['Tokens', 'Layers'], value='Tokens', label='Graphs')
     #base_token = gr.
     with gr.Group():
+        mode = gr.Radio(choices=['Each tokens', 'Each layers'], value='Each tokens', label='Mode', info='''
+[Each token] Show graphs for each tokens.
+[Each layers] Show graphs for each layers.
+'''.strip())
         show = gr.Radio(choices=['All', 'Selected', 'None'], value='Selected', label='Visibility')
         with gr.Row():
-            base_layer = gr.Number(value=0, label="Base layer", info='0: before first LlamaDecoderLayer, >0: after LlamaDecoderLayer(s)')
-            norm = gr.Radio(choices=['Absolute', 'Ignore', 'Relative to base layer', 'Relative to previous layer'], value='Relative to base layer',
-                            label='Norm', info='Ignore: always 1, Relative to: ||current||/||reference||')
-            angle = gr.Radio(choices=['Relative to base layer', 'Relative to previous layer'], value='Relative to base layer',
+            base = gr.Number(value=0, label="Reference", info='''
+The index of the reference layer (for "Each tokens" mode) or the reference token (for "Each layer" mode).
+[Each tokens] 0: before first LlamaDecoderLayer; >0: after LlamaDecoderLayer(s).
+[Each layers] The index of output tokens.
+'''.strip())
+            norm = gr.Radio(choices=['Absolute', 'Ignore', 'Relative to reference', 'Relative to previous'], value='Relative to reference',
+                            label='Norm', info='Ignore: always 1\nRelative to: ||current||/||reference||')
+            angle = gr.Radio(choices=['Relative to reference', 'Relative to previous'], value='Relative to reference',
                              label='Angle', info='Relative to: Arg(current - reference)')
     select = gr.HTML(value='<label>Output<div class="output"></div></label>', elem_classes="output hidden_states")
     select_clear = gr.Button(value="Clear Selection")
@@ -162,7 +170,7 @@ def hidden_states_tab(show_states: Callable):
     select_clear.click(None, [], [], js='_ => Array.from(document.querySelectorAll(".output.hidden_states .token")).forEach(z => z.classList.remove("selected")) || []')
     graph_create.click(
         show_states,
-        inputs=[show, base_layer, norm, angle, dummy],
+        inputs=[mode, show, base, norm, angle, dummy],
         outputs=[graph],
         js='(...xs) => [...xs.slice(0,-2), JSON.stringify(Array.from(document.querySelectorAll(".output.hidden_states .token.selected")).map(z => +z.dataset.tokenPos))]'
     )

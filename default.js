@@ -56,4 +56,8 @@
         target.classList.toggle("selected");
     });
 
+    for (let info of document.querySelectorAll('.has-info + *')) {
+        info.innerHTML = info.innerHTML.replaceAll('\n', '<br/>');
+    }
+
 })
