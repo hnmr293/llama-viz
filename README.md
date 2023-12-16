@@ -51,3 +51,11 @@ $ pip install -r requirements.txt
 ### Attention Tab
 
 ![attention example (en)](./images/attn.png)
+
+### Hidden States Tab
+
+![hidden states example](./images/hidden_states.png)
+
+![hidden states example 2](./images/hidden_states_2.png)
+
+![hidden states example 3](./images/hidden_states_3.png)
